@@ -1,8 +1,41 @@
 import { Sidebar, Topbar } from "@/components/dashboard/Layout";
 import { Button } from "@/components/ui/button";
-import { Check, CreditCard, Download, Clock } from "lucide-react";
+import { Check, Download } from "lucide-react";
+import { useEffect, useState } from "react";
+import { apiFetch } from "@/lib/api";
 
 export default function Billing() {
+  const [current, setCurrent] = useState<any>(null);
+  const [history, setHistory] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const load = async () => {
+    const [currentBilling, billingHistory] = await Promise.all([
+      apiFetch("/api/billing/current"),
+      apiFetch<{ billings: any[] }>("/api/billing/history"),
+    ]);
+    setCurrent(currentBilling);
+    setHistory(billingHistory.billings);
+  };
+
+  useEffect(() => {
+    load().catch(() => undefined);
+  }, []);
+
+  const subscribePremium = async () => {
+    setLoading(true);
+    try {
+      const payment = await apiFetch<{ paymentUrl: string }>("/api/billing/payments/initiate", {
+        method: "POST",
+        body: JSON.stringify({ packageTier: "premium", months: 1 }),
+      });
+      await apiFetch(payment.paymentUrl);
+      await load();
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="flex h-screen bg-muted/30 overflow-hidden">
       {/* Desktop Sidebar */}
@@ -33,21 +66,17 @@ export default function Billing() {
                   <div className="inline-block bg-primary/10 text-primary text-xs font-bold px-3 py-1 rounded-full mb-4">
                     বর্তমান প্যাকেজ
                   </div>
-                  <h2 className="text-3xl font-bold text-foreground mb-2">ফ্রি ট্রায়াল <span className="text-lg text-primary bg-primary/10 px-2 py-0.5 rounded font-semibold ml-2">বেসিক</span></h2>
-                  <p className="text-muted-foreground mb-6">৩০ দিনের ফ্রি ট্রায়াল পিরিয়ড চলছে</p>
+                  <h2 className="text-3xl font-bold text-foreground mb-2">
+                    {current?.packageTier === "premium" ? "প্রিমিয়াম" : "ফ্রি"}
+                    <span className="text-lg text-primary bg-primary/10 px-2 py-0.5 rounded font-semibold ml-2">{current?.subscriptionStatus ?? "loading"}</span>
+                  </h2>
+                  <p className="text-muted-foreground mb-6">আপনার বর্তমান সাবস্ক্রিপশন অবস্থা</p>
                   
                   <div className="space-y-4 max-w-sm">
                     <div className="flex justify-between text-sm">
                       <span className="font-medium">মেয়াদ শেষ হবে:</span>
-                      <span className="text-muted-foreground">০৫ এপ্রিল, ২০২৬</span>
-                    </div>
-                    <div className="w-full bg-muted rounded-full h-2.5 overflow-hidden">
-                      <div className="bg-primary h-2.5 rounded-full" style={{ width: '10%' }}></div>
-                    </div>
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>২ দিন ব্যবহৃত</span>
-                      <span className="text-amber-600 font-medium flex items-center gap-1">
-                        <Clock className="w-3 h-3" /> ২৮ দিন বাকি
+                      <span className="text-muted-foreground">
+                        {current?.renewalDueAt ? new Date(current.renewalDueAt).toLocaleDateString() : "N/A"}
                       </span>
                     </div>
                   </div>
@@ -55,11 +84,11 @@ export default function Billing() {
 
                 <div className="flex flex-col justify-center border-t lg:border-t-0 lg:border-l border-border pt-6 lg:pt-0 lg:pl-8">
                   <h3 className="font-bold text-lg mb-4">প্যাকেজ আপগ্রেড করুন</h3>
-                  <p className="text-sm text-muted-foreground mb-6">ট্রায়াল শেষে আপনার একাউন্ট নিষ্ক্রিয় হয়ে যাবে। নিরবচ্ছিন্ন সেবার জন্য এখনই প্যাকেজ বেছে নিন।</p>
+                    <p className="text-sm text-muted-foreground mb-6">ফ্রি বা প্রিমিয়াম প্যাকেজ থেকে বেছে নিন।</p>
                   <div className="flex flex-col sm:flex-row gap-3">
-                    <Button className="bg-primary hover:bg-primary/90 text-white w-full sm:w-auto">
-                      প্যাকেজ দেখুন
-                    </Button>
+                      <Button className="bg-primary hover:bg-primary/90 text-white w-full sm:w-auto" onClick={subscribePremium} disabled={loading}>
+                        {loading ? "প্রসেস হচ্ছে..." : "প্রিমিয়াম আপগ্রেড"}
+                      </Button>
                   </div>
                 </div>
               </div>
@@ -83,28 +112,15 @@ export default function Billing() {
                   <Button className="w-full bg-primary text-white hover:bg-primary/90">সাবস্ক্রাইব করুন</Button>
                 </div>
                 
-                {/* Plus */}
                 <div className="bg-white rounded-2xl border border-border shadow-sm p-6 flex flex-col relative overflow-hidden">
-                  <h4 className="text-xl font-bold mb-1">প্লাস</h4>
+                  <h4 className="text-xl font-bold mb-1">প্রিমিয়াম</h4>
                   <div className="text-3xl font-extrabold mb-4">৩৯৯৳<span className="text-sm font-normal text-muted-foreground">/মাস</span></div>
                   <ul className="space-y-3 mb-6 flex-1 text-sm text-muted-foreground">
-                    <li className="flex gap-2"><Check className="w-4 h-4 text-emerald-500 shrink-0" /> বেসিক প্যাকেজের সবকিছু</li>
+                    <li className="flex gap-2"><Check className="w-4 h-4 text-emerald-500 shrink-0" /> ফ্রি প্ল্যানের সবকিছু</li>
                     <li className="flex gap-2"><Check className="w-4 h-4 text-emerald-500 shrink-0" /> অ্যাডভান্সড এডিটিং</li>
-                    <li className="flex gap-2"><Check className="w-4 h-4 text-emerald-500 shrink-0" /> কাস্টম ডোমেইন (amar-school.com)</li>
+                    <li className="flex gap-2"><Check className="w-4 h-4 text-emerald-500 shrink-0" /> কাস্টম ডোমেইন</li>
                   </ul>
-                  <Button variant="outline" className="w-full">আপগ্রেড করুন</Button>
-                </div>
-
-                {/* Premium */}
-                <div className="bg-slate-50 rounded-2xl border border-border shadow-sm p-6 flex flex-col opacity-75">
-                  <div className="inline-block bg-slate-200 text-slate-600 text-xs font-bold px-2 py-0.5 rounded w-fit mb-2">শীঘ্রই আসছে</div>
-                  <h4 className="text-xl font-bold mb-1">প্রিমিয়াম</h4>
-                  <div className="text-3xl font-extrabold mb-4">৬৯৯৳<span className="text-sm font-normal text-muted-foreground">/মাস</span></div>
-                  <ul className="space-y-3 mb-6 flex-1 text-sm text-muted-foreground">
-                    <li className="flex gap-2"><Check className="w-4 h-4 text-slate-400 shrink-0" /> সম্পূর্ণ স্কুল ম্যানেজমেন্ট সিস্টেম</li>
-                    <li className="flex gap-2"><Check className="w-4 h-4 text-slate-400 shrink-0" /> প্লাস প্যাকেজের সবকিছু</li>
-                  </ul>
-                  <Button variant="outline" className="w-full" disabled>অপেক্ষায় থাকুন</Button>
+                  <Button variant="outline" className="w-full" onClick={subscribePremium} disabled={loading}>আপগ্রেড করুন</Button>
                 </div>
               </div>
             </div>
@@ -127,25 +143,28 @@ export default function Billing() {
                     </tr>
                   </thead>
                   <tbody>
-                    <tr className="border-b border-border">
-                      <td className="px-6 py-4">০৫ মার্চ, ২০২৬</td>
-                      <td className="px-6 py-4 font-medium">অ্যাকাউন্ট তৈরি (ফ্রি ট্রায়াল)</td>
-                      <td className="px-6 py-4">০৳</td>
-                      <td className="px-6 py-4">
-                        <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-medium">সফল</span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <Button variant="ghost" size="sm" className="h-8 px-2 text-muted-foreground hover:text-primary">
-                          <Download className="w-4 h-4" />
-                        </Button>
-                      </td>
-                    </tr>
-                    {/* Empty state for other rows */}
-                    <tr>
-                      <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">
-                        আর কোনো পেমেন্ট হিস্ট্রি নেই
-                      </td>
-                    </tr>
+                    {history.map((item) => (
+                      <tr className="border-b border-border" key={item._id}>
+                        <td className="px-6 py-4">{new Date(item.createdAt).toLocaleDateString()}</td>
+                        <td className="px-6 py-4 font-medium">{item.packageTier}</td>
+                        <td className="px-6 py-4">{item.amount}৳</td>
+                        <td className="px-6 py-4">
+                          <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-medium">{item.status}</span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <Button variant="ghost" size="sm" className="h-8 px-2 text-muted-foreground hover:text-primary">
+                            <Download className="w-4 h-4" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                    {history.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">
+                          আর কোনো পেমেন্ট হিস্ট্রি নেই
+                        </td>
+                      </tr>
+                    ) : null}
                   </tbody>
                 </table>
               </div>

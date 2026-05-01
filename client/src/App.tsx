@@ -23,6 +23,7 @@ import AccountsManagement from "@/pages/dashboard/premium/accounts";
 import HRManagement from "@/pages/dashboard/premium/hr";
 
 import PortfolioTemplate from "@/pages/portfolio/demo";
+import PublicPortfolioPage from "@/pages/portfolio/public";
 
 function Router() {
   return (
@@ -46,6 +47,7 @@ function Router() {
       <Route path="/dashboard/premium/hr" component={HRManagement} />
       
       <Route path="/portfolio/demo" component={PortfolioTemplate} />
+      <Route path="/portfolio/:slug" component={PublicPortfolioPage} />
       {/* Fallback to 404 */}
       <Route component={NotFound} />
     </Switch>

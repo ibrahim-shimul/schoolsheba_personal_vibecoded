@@ -1,14 +1,18 @@
 import { type Express } from "express";
 import { createServer as createViteServer, createLogger } from "vite";
 import { type Server } from "http";
-import viteConfig from "../vite.config";
 import fs from "fs";
 import path from "path";
 import { nanoid } from "nanoid";
+import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
+import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
+import { metaImagesPlugin } from "../vite-plugin-meta-images";
 
 const viteLogger = createLogger();
 
 export async function setupVite(server: Server, app: Express) {
+  const rootDir = process.cwd();
   const serverOptions = {
     middlewareMode: true,
     hmr: { server, path: "/vite-hmr" },
@@ -16,7 +20,20 @@ export async function setupVite(server: Server, app: Express) {
   };
 
   const vite = await createViteServer({
-    ...viteConfig,
+    plugins: [react(), runtimeErrorOverlay(), tailwindcss(), metaImagesPlugin()],
+    resolve: {
+      alias: {
+        "@": path.resolve(rootDir, "client", "src"),
+        "@shared": path.resolve(rootDir, "shared"),
+        "@assets": path.resolve(rootDir, "attached_assets"),
+      },
+    },
+    css: {
+      postcss: {
+        plugins: [],
+      },
+    },
+    root: path.resolve(rootDir, "client"),
     configFile: false,
     customLogger: {
       ...viteLogger,
@@ -36,8 +53,7 @@ export async function setupVite(server: Server, app: Express) {
 
     try {
       const clientTemplate = path.resolve(
-        import.meta.dirname,
-        "..",
+        rootDir,
         "client",
         "index.html",
       );

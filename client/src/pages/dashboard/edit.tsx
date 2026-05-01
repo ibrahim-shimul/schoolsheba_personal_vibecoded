@@ -23,11 +23,29 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "wouter";
+import { apiFetch } from "@/lib/api";
 
 export default function WebsiteEditor() {
   const [activeSection, setActiveSection] = useState("theme");
+  const [portfolioContent, setPortfolioContent] = useState({
+    schoolName: "ঢাকা আইডিয়াল স্কুল",
+    heroTitle: "আধুনিক শিক্ষার বিশ্বস্ত প্রতিষ্ঠান",
+    heroSubtitle: "সুশিক্ষিত, নীতিবান ও আধুনিক বিশ্বের উপযোগী নাগরিক গড়ে তোলাই আমাদের লক্ষ্য।",
+    primaryColor: "#00A8FF",
+  });
+
+  useEffect(() => {
+    apiFetch<any>("/api/portfolio/content")
+      .then((data) => setPortfolioContent({
+        schoolName: data.schoolName,
+        heroTitle: data.heroTitle,
+        heroSubtitle: data.heroSubtitle,
+        primaryColor: data.primaryColor,
+      }))
+      .catch(() => undefined);
+  }, []);
 
   const sections = [
     { id: "theme", name: "থিম ও ডিজাইন", icon: Palette },
@@ -84,7 +102,7 @@ export default function WebsiteEditor() {
               <div className="space-y-4">
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">স্কুলের নাম</Label>
-                  <Input defaultValue="ঢাকা আইডিয়াল স্কুল" className="h-10" />
+                  <Input value={portfolioContent.schoolName} onChange={(e) => setPortfolioContent((p) => ({ ...p, schoolName: e.target.value }))} className="h-10" />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">স্লোগান</Label>
@@ -119,11 +137,11 @@ export default function WebsiteEditor() {
               <div className="space-y-4">
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">প্রধান শিরোনাম</Label>
-                  <Input defaultValue="আধুনিক শিক্ষার বিশ্বস্ত প্রতিষ্ঠান" className="h-10" />
+                  <Input value={portfolioContent.heroTitle} onChange={(e) => setPortfolioContent((p) => ({ ...p, heroTitle: e.target.value }))} className="h-10" />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">সাব-টাইটেল</Label>
-                  <Textarea defaultValue="সুশিক্ষিত, নীতিবান ও আধুনিক বিশ্বের উপযোগী নাগরিক গড়ে তোলাই আমাদের লক্ষ্য।" className="h-24 resize-none leading-relaxed" />
+                  <Textarea value={portfolioContent.heroSubtitle} onChange={(e) => setPortfolioContent((p) => ({ ...p, heroSubtitle: e.target.value }))} className="h-24 resize-none leading-relaxed" />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">বাটন টেক্সট</Label>
@@ -347,7 +365,16 @@ export default function WebsiteEditor() {
             <Eye className="w-4 h-4 mr-2" />
             প্রিভিউ দেখুন
           </Button>
-          <Button size="sm" className="h-9 bg-[#00A8FF] hover:bg-[#0090DF] text-white">
+          <Button
+            size="sm"
+            className="h-9 bg-[#00A8FF] hover:bg-[#0090DF] text-white"
+            onClick={async () => {
+              await apiFetch("/api/portfolio/content", {
+                method: "PUT",
+                body: JSON.stringify(portfolioContent),
+              });
+            }}
+          >
             <Save className="w-4 h-4 mr-2" />
             পরিবর্তন সেভ করুন
           </Button>
@@ -431,9 +458,9 @@ export default function WebsiteEditor() {
                 {/* Minimal mockup of the website preview */}
                 <div className="bg-white text-slate-800 p-4 flex justify-between items-center px-8 border-b">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-[#00A8FF] rounded-full flex items-center justify-center font-bold text-white">DI</div>
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white" style={{ backgroundColor: portfolioContent.primaryColor }}>DI</div>
                     <div className="flex flex-col">
-                      <span className="font-bold text-lg leading-tight">ঢাকা আইডিয়াল স্কুল</span>
+                      <span className="font-bold text-lg leading-tight">{portfolioContent.schoolName}</span>
                       <span className="text-xs text-slate-500">শিক্ষাই জাতির মেরুদণ্ড</span>
                     </div>
                   </div>
@@ -451,9 +478,9 @@ export default function WebsiteEditor() {
                   <div className="absolute inset-0 bg-gradient-to-r from-slate-900 via-slate-900/90 to-transparent z-10"></div>
                   <img src="https://images.unsplash.com/photo-1523050854058-8df90110c9f1?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80" className="absolute inset-0 w-full h-full object-cover opacity-50" alt="Hero" />
                   <div className="relative z-20 text-center space-y-6 px-4 max-w-3xl mx-auto">
-                    <div className="inline-block bg-[#00A8FF] text-white px-4 py-1.5 rounded-full text-sm font-medium mb-2">ভর্তি চলছে ২০২৬</div>
-                    <h1 className="text-4xl md:text-5xl font-bold text-white leading-tight">আধুনিক শিক্ষার বিশ্বস্ত প্রতিষ্ঠান</h1>
-                    <p className="text-slate-300 text-lg">সুশিক্ষিত, নীতিবান ও আধুনিক বিশ্বের উপযোগী নাগরিক গড়ে তোলাই আমাদের লক্ষ্য।</p>
+                    <div className="inline-block text-white px-4 py-1.5 rounded-full text-sm font-medium mb-2" style={{ backgroundColor: portfolioContent.primaryColor }}>ভর্তি চলছে ২০২৬</div>
+                    <h1 className="text-4xl md:text-5xl font-bold text-white leading-tight">{portfolioContent.heroTitle}</h1>
+                    <p className="text-slate-300 text-lg">{portfolioContent.heroSubtitle}</p>
                     <Button className="bg-white text-slate-900 hover:bg-slate-100 rounded-full px-8 py-6 text-lg font-bold mt-4 shadow-lg">ভর্তি ফর্ম পূরণ করুন</Button>
                   </div>
                 </div>
